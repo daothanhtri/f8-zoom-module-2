@@ -63,7 +63,6 @@ const updateFollowButton = (isFollowing) => {
   }
 };
 
-
 const createTrackItem = (track, index, isDetailedTrack = false) => {
   const trackItem = document.createElement("div");
   addClass(trackItem, "track-item");
@@ -212,7 +211,6 @@ const handleImageUpload = async (file) => {
   }
 };
 
-
 const handleNameOrDescriptionEdit = async (element, field) => {
   // Only allow for playlists and if it's the owner
   if (
@@ -279,7 +277,6 @@ const handleNameOrDescriptionEdit = async (element, field) => {
     }
   });
 };
-
 
 function setupEventListeners() {
   // Hook up the follow button click
@@ -367,19 +364,14 @@ export const renderDetailPage = async (type, id) => {
     data = response?.data; // Use optional chaining to ensure 'data' is null if 'response.data' doesn't exist
 
     if (!data) {
-      // If 'data' is null/undefined, show error and stop
       showToast(
         `Item with ID ${id} not found or API returned no data.`,
         "error"
       );
-      addClass(detailPageSections, "hidden"); // Keep detail page hidden
+      addClass(detailPageSections, "hidden");
       return;
     }
 
-    // Now, 'data' is confirmed to exist, so we can safely access its properties.
-
-    // Common UI updates for all types
-    // Set hero image and name based on type
     if (type === "track") {
       detailImage.src =
         data.image_url || data.album_cover_image_url || "placeholder.svg";
@@ -437,7 +429,7 @@ export const renderDetailPage = async (type, id) => {
       }
     } else if (type === "track") {
       // detailName and detailImage are already set above in common section
-      detailSubtitle.textContent = `${data.artist_name || "Unknown Artist"} • ${
+      detailSubtitle.textContent = `${data.name || "Unknown Artist"} • ${
         data.album_title || "Unknown Album"
       } • ${formatDuration(data.duration || 0)}`;
 
@@ -473,10 +465,6 @@ export const hideDetailPage = () => {
   currentDetailData = null; // Clear current detail data
 };
 
-/**
- * Initializes the detail page functionality.
- * This should be called once when the app starts.
- */
 export const initDetailPage = () => {
   setupEventListeners(); // Sẽ gọi hàm đã định nghĩa ở trên
 };

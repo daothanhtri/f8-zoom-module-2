@@ -5,7 +5,7 @@ export const getAllTracks = async () => {
   try {
     // Giả định endpoint cho tất cả các bài hát là "tracks"
     const response = await httpRequest.get("tracks/popular?limit=3");
-    return response || { data: [] };
+    return { data: response.tracks };
   } catch (error) {
     console.error("API Error: Get All Tracks failed", error);
     throw error;
@@ -24,9 +24,8 @@ export const getPopularTracks = async () => {
 
 export const getTrendingTracks = async () => {
   try {
-    // Giả định endpoint cho các bài hát thịnh hành là "tracks/trending"
     const response = await httpRequest.get("tracks/trending?limit=20");
-    return response || { data: [] };
+    return { data: response.tracks };
   } catch (error) {
     console.error("API Error: Get Trending Tracks failed", error);
     throw error;
@@ -45,8 +44,6 @@ export const getTrackById = async (id) => {
 
 export const playTrack = async (trackId) => {
   try {
-    // Giả định endpoint cho hành động Play Track
-    // Thường là POST đến một endpoint action, có thể cần body chứa device_id, etc.
     return await httpRequest.post(`tracks/${trackId}/play`);
   } catch (error) {
     console.error(`API Error: Play Track (${trackId}) failed`, error);

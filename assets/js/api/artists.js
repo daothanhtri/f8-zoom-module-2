@@ -33,28 +33,26 @@ export const getTrendingArtists = async () => {
   }
 };
 
-export const getArtistAlbums = async (artistId) => {
+export const getArtistAlbums = async (id) => {
   try {
-    const response = await httpRequest.get(`artists/${artistId}/albums`);
-    console.log(response.artistAlbums);
-
-    return response || { data: response.artistAlbums };
+    const response = await httpRequest.get(`artists/${id}/albums`);
+    return { data: response.id };
   } catch (error) {
     console.error(
-      `API Error: Get Artist Albums for Artist ID (${artistId}) failed`,
+      `API Error: Get Artist Albums for Artist ID (${id}) failed`,
       error
     );
     throw error;
   }
 };
 
-export const getArtistTopTracks = async (artistId) => {
+export const getArtistTopTracks = async (id) => {
   try {
-    const response = await httpRequest.get(`artists/${artistId}/top-tracks`);
-    return response || { data: [] };
+    const response = await httpRequest.get(`artists/${id}/tracks/popular`);
+    return { data: response.tracks };
   } catch (error) {
     console.error(
-      `API Error: Get Artist Top Tracks for Artist ID (${artistId}) failed`,
+      `API Error: Get Artist Top Tracks for Artist ID (${id}) failed`,
       error
     );
     throw error;

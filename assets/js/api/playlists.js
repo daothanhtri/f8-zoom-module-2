@@ -4,7 +4,7 @@ import httpRequest from "../utils/httpRequest.js"; // Đảm bảo đường d�
 export const getAllPlaylists = async () => {
   try {
     const response = await httpRequest.get("playlists?limit=20&offset=0");
-    return response || { data: [] }; // Đảm bảo luôn trả về đối tượng có 'data' là mảng
+    return { data: response.playLists }; // Đảm bảo luôn trả về đối tượng có 'data' là mảng
   } catch (error) {
     console.error("API Error: Get All Playlists failed", error);
     throw error;
@@ -69,10 +69,8 @@ export const unfollowPlaylist = async (id) => {
 
 export const getMyPlaylists = async () => {
   try {
-    // Endpoint cho playlists của người dùng hiện tại
-    // Đảm bảo endpoint này đúng với tài liệu API của bạn
     const response = await httpRequest.get("me/playlists");
-    return response || { data: [] };
+    return { data: response.playLists };
   } catch (error) {
     console.error("API Error: Get My Playlists failed", error);
     throw error;
