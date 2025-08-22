@@ -4,7 +4,6 @@ import { getPlaylistById } from "../api/playlists.js";
 import { getUserData } from "../utils/storage.js";
 import { openEditPlaylistModal } from "../components/editPlaylistModal.js";
 
-// DOM Elements
 const editPageSection = getElement("#editPlaylistPageSection");
 const imageDisplay = getElement("#editPlaylistImageDisplay");
 const imagePreview = getElement("#editPlaylistImagePreview");
@@ -13,38 +12,40 @@ const ownerDisplay = getElement("#editPlaylistOwner");
 
 let currentPlaylist = null;
 
+const updatePageUI = (updatedPlaylistData) => {
+  currentPlaylist = { ...currentPlaylist, ...updatedPlaylistData };
 
-const updatePageUI = (playlist) => {
-  currentPlaylist = playlist; 
-
-  nameDisplay.textContent = playlist.name;
+  nameDisplay.textContent = currentPlaylist.name;
   ownerDisplay.textContent =
-    playlist.owner?.display_name || getUserData()?.display_name;
+    currentPlaylist.owner?.display_name || getUserData()?.display_name;
 
-  if (playlist.cover_image_url) {
-    imagePreview.src = playlist.cover_image_url;
+  if (currentPlaylist.cover_image_url) {
+    imagePreview.src = currentPlaylist.cover_image_url;
     removeClass(imagePreview, "hidden");
   } else {
-    addClass(imagePreview, "hidden");
     imagePreview.src = "";
+    addClass(imagePreview, "hidden");
   }
 
   document.dispatchEvent(new CustomEvent("sidebar:refreshPlaylists"));
 };
 
-const setupEventListeners = () => {
-  const openModalHandler = () => {
-    if (currentPlaylist) {
-      openEditPlaylistModal(currentPlaylist, (updatedPlaylist) => {
-      
-        updatePageUI(updatedPlaylist);
-      });
+function setupEventListeners() {
+  editPageSection.addEventListener("click", (e) => {
+    console.log(123);
+    if (
+      e.target === imageDisplay ||
+      e.target === nameDisplay ||
+      imageDisplay.contains(e.target)
+    ) {
+      if (currentPlaylist) {
+        openEditPlaylistModal(currentPlaylist, (updatedData) => {
+          updatePageUI(updatedData);
+        });
+      }
     }
-  };
-
-  imageDisplay.addEventListener("click", openModalHandler);
-  nameDisplay.addEventListener("click", openModalHandler);
-};
+  });
+}
 
 export const renderEditPlaylistPage = async (id) => {
   addClass(editPageSection, "hidden");
@@ -58,15 +59,15 @@ export const renderEditPlaylistPage = async (id) => {
     }
 
     const currentUser = getUserData();
-    if (!currentUser || currentUser.id !== playlistData.owner?.id) {
+    if (
+      !currentUser ||
+      String(currentUser.id) !== String(playlistData.owner?.id)
+    ) {
       showToast("You don't have permission to edit this playlist.", "error");
       return;
     }
 
-    nameDisplay.textContent = playlistData.name;
-
     updatePageUI(playlistData);
-
     removeClass(editPageSection, "hidden");
   } catch (error) {
     console.error("Failed to load playlist for editing:", error);

@@ -16,7 +16,7 @@ export const getAllPlaylists = async () => {
 export const getPlaylistById = async (id) => {
   try {
     const response = await httpRequest.get(`playlists/${id}`);
-    return { data: response.playlists };
+    return { data: response };
   } catch (error) {
     console.error(`API Error: Get Playlist by ID (${id}) failed`, error);
     throw error;

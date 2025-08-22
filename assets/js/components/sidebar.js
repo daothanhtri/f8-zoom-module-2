@@ -12,9 +12,9 @@ import {
   getMyPlaylists,
   deletePlaylist,
   unfollowPlaylist,
+  createPlaylist,
 } from "../api/playlists.js";
 import { getMyArtists, unfollowArtist } from "../api/artists.js";
-import { createPlaylist } from "../api/playlists.js";
 import {
   getAccessToken,
   removeAccessToken,
@@ -61,10 +61,13 @@ export const renderLibraryItems = async () => {
     let response;
     if (currentActiveTab === "playlists") {
       response = await getMyPlaylists();
+      items = Array.isArray(response?.data) ? response.data : [];
+      items.forEach((i) => (i.type = "playlist"));
     } else if (currentActiveTab === "artists") {
       response = await getMyArtists();
+      items = Array.isArray(response?.data) ? response.data : [];
+      items.forEach((i) => (i.type = "artist"));
     }
-    items = Array.isArray(response?.data) ? response.data : [];
   } catch (error) {
     if (error.status === 401) {
       showToast("Your session has expired. Please log in again.", "error");
@@ -92,7 +95,7 @@ export const renderLibraryItems = async () => {
     if (currentSortBy === "alphabetical") {
       return (a.name || a.title || "").localeCompare(b.name || b.title || "");
     }
-    return 0;
+    return 0; // Default to 'recents' which is API default order
   });
 
   items.forEach((item) => {
@@ -107,12 +110,10 @@ export const renderLibraryItems = async () => {
       ? `Playlist • ${item.owner?.display_name || "User"}`
       : "Artist";
 
-    const imageOrIcon =
-      item.cover_image_url || item.image_url
-        ? `<img src="${
-            item.cover_image_url || item.image_url
-          }" alt="${itemTitle}" class="item-image" />`
-        : `<div class="item-icon liked-songs"><i class="fas fa-music"></i></div>`;
+    const imageUrl = item.cover_image_url || item.image_url;
+    const imageOrIcon = imageUrl
+      ? `<img src="${imageUrl}" alt="${itemTitle}" class="item-image" />`
+      : `<div class="item-icon liked-songs"><i class="fas fa-music"></i></div>`;
 
     itemElement.innerHTML = `
       ${imageOrIcon}
@@ -129,9 +130,7 @@ export const renderLibraryItems = async () => {
     }
 
     itemElement.addEventListener("click", () => {
-      if (navigateToCallback) {
-        navigateToCallback("detail", item.id, item.type);
-      }
+      if (navigateToCallback) navigateToCallback("detail", item.id, item.type);
     });
 
     itemElement.addEventListener("contextmenu", (e) => {
@@ -140,13 +139,11 @@ export const renderLibraryItems = async () => {
         isPlaylist &&
         currentUser &&
         String(item.owner?.id) === String(currentUser.id);
-      const isFollowing = item.is_followed || false;
-
       showContextMenu(e, {
         id: item.id,
         type: item.type,
-        isOwner: isOwner,
-        isFollowing: isFollowing,
+        isOwner,
+        isFollowing: item.is_followed || false,
         name: itemTitle,
       });
     });
@@ -161,12 +158,6 @@ const handleContextMenuAction = async (action, itemData) => {
   const { id, type, isOwner, name } = itemData;
   try {
     switch (action) {
-      case "unfollow":
-      case "remove-from-profile":
-        if (type === "playlist") await unfollowPlaylist(id);
-        else if (type === "artist") await unfollowArtist(id);
-        showToast(`Removed "${name}" from your library.`, "success");
-        break;
       case "delete":
         if (type === "playlist" && isOwner) {
           if (
@@ -180,10 +171,8 @@ const handleContextMenuAction = async (action, itemData) => {
           showToast("You don't have permission to delete this.", "error");
         }
         break;
-      default:
-        showToast(`Action "${action}" is not yet implemented.`, "info");
-        return;
     }
+
     await renderLibraryItems();
   } catch (error) {
     showToast(error.message || `Failed to ${action} ${type}.`, "error");
@@ -201,32 +190,6 @@ const setupEventListeners = () => {
       currentActiveTab = target.dataset.tab;
       renderLibraryItems();
     }
-  });
-
-  sortBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    toggleClass(sortDropdown, "show");
-  });
-
-  sortDropdown.addEventListener("click", (e) => {
-    const target = e.target.closest("li");
-    if (target) {
-      currentSortBy = target.dataset.sortBy;
-      sortBtn.innerHTML = `${target.textContent} <i class="fas fa-list"></i>`;
-      removeClass(sortDropdown, "show");
-      renderLibraryItems();
-    }
-  });
-
-  document.addEventListener("click", () => {
-    removeClass(sortDropdown, "show");
-  });
-
-  viewToggleBtn.addEventListener("click", () => {
-    currentViewMode = currentViewMode === "list" ? "grid" : "list";
-    viewToggleBtn.querySelector("i").className =
-      currentViewMode === "list" ? "fas fa-grip-horizontal" : "fas fa-list";
-    renderLibraryItems();
   });
 
   createPlaylistBtn.addEventListener("click", async () => {
@@ -252,7 +215,6 @@ const setupEventListeners = () => {
   });
 
   initContextMenu(handleContextMenuAction);
-
   document.addEventListener("authStatusChange", renderLibraryItems);
   document.addEventListener("sidebar:refreshPlaylists", () => {
     if (currentActiveTab === "playlists") renderLibraryItems();

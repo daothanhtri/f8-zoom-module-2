@@ -109,7 +109,6 @@ export const initContextMenu = (callback) => {
     if (target && !hasClass(target, "disabled")) {
       const action = target.dataset.action;
       if (action && currentContextItemData) {
-       
         callback(action, currentContextItemData);
       }
       hideContextMenu();
