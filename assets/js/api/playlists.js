@@ -1,9 +1,12 @@
 import httpRequest from "../utils/httpRequest.js"; // Đảm bảo đường dẫn đúng
+import { getAccessToken } from "../utils/storage.js";
+
+const accessToken = getAccessToken();
 
 export const getAllPlaylists = async () => {
   try {
     const response = await httpRequest.get("playlists?limit=20&offset=0");
-    return { data: response.playLists };
+    return { data: response.playlists };
   } catch (error) {
     console.error("API Error: Get All Playlists failed", error);
     throw error;
@@ -13,7 +16,7 @@ export const getAllPlaylists = async () => {
 export const getPlaylistById = async (id) => {
   try {
     const response = await httpRequest.get(`playlists/${id}`);
-    return { data: response };
+    return { data: response.playlists };
   } catch (error) {
     console.error(`API Error: Get Playlist by ID (${id}) failed`, error);
     throw error;
@@ -23,7 +26,7 @@ export const getPlaylistById = async (id) => {
 export const getPlaylistTracks = async (playlistId) => {
   try {
     const response = await httpRequest.get(`playlists/${playlistId}/tracks`);
-    return { data: response.playLists };
+    return { data: response.playlists };
   } catch (error) {
     console.error(
       `API Error: Get Playlist Tracks for Playlist ID (${playlistId}) failed`,
@@ -91,7 +94,7 @@ export const unfollowPlaylist = async (id) => {
 export const getMyPlaylists = async () => {
   try {
     const response = await httpRequest.get("me/playlists");
-    return { data: response };
+    return { data: response.playlists };
   } catch (error) {
     console.error("API Error: Get My Playlists failed", error);
     throw error;

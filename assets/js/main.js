@@ -1,7 +1,12 @@
 import { initAuthModal, openAuthModal } from "./components/authModal.js";
 import { initHeader, updateHeaderUI } from "./components/header.js";
 import { initSidebar, renderLibraryItems } from "./components/sidebar.js";
-import { initCreatePlaylistModal } from "./components/createPlaylistModal.js";
+import { initEditPlaylistModal } from "./components/editPlaylistModal.js";
+import {
+  renderEditPlaylistPage,
+  hideEditPlaylistPage,
+  initEditPlaylistPage,
+} from "./pages/editPlaylistPage.js";
 import { renderHomePage, hideHomePage, initHomePage } from "./pages/home.js";
 import {
   renderDetailPage,
@@ -14,11 +19,14 @@ import playerModule from "./components/player.js";
 export const navigateTo = async (view, id = null, type = null) => {
   hideHomePage();
   hideDetailPage();
+  hideEditPlaylistPage();
 
   if (view === "home") {
     await renderHomePage();
   } else if (view === "detail" && id && type) {
     await renderDetailPage(type, id);
+  } else if (view === "editPlaylist" && id) {
+    await renderEditPlaylistPage(id);
   }
 };
 
@@ -41,7 +49,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initHeader(navigateTo);
   initSidebar(navigateTo);
-  initCreatePlaylistModal();
+  initEditPlaylistModal();
+  initEditPlaylistPage();
   initHomePage(navigateTo);
   initDetailPage();
 

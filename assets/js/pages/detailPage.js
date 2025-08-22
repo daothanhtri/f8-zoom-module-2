@@ -1,6 +1,5 @@
 import {
   getElement,
-  getElements,
   addClass,
   removeClass,
   hasClass,
@@ -9,7 +8,6 @@ import {
 import { showToast } from "../utils/toast.js";
 import {
   getPlaylistById,
-  updatePlaylist,
   followPlaylist,
   unfollowPlaylist,
 } from "../api/playlists.js";
@@ -21,11 +19,10 @@ import {
   getArtistPopularTracks,
 } from "../api/artists.js";
 import { getTrackById, likeTrack, unlikeTrack } from "../api/tracks.js";
-import { uploadImage, uploadPlaylistCover } from "../api/upload.js";
 import { getUserData } from "../utils/storage.js";
 import playerModule from "../components/player.js";
+import { openEditPlaylistModal } from "../components/editPlaylistModal.js";
 
-// --- CÁC BIẾN DOM ---
 const detailPageSections = getElement("#detailPageSections");
 const detailHero = getElement("#detailHero");
 const detailImage = getElement("#detailImage");
@@ -48,6 +45,7 @@ const formatDuration = (seconds) => {
   return `${minutes}:${formattedSeconds}`;
 };
 
+
 const updateFollowButton = (isFollowing) => {
   if (isFollowing) {
     detailFollowBtn.textContent = "Following";
@@ -58,11 +56,11 @@ const updateFollowButton = (isFollowing) => {
   }
 };
 
+
 const createTrackItem = (track, index, isDetailedTrack = false) => {
   const trackItem = document.createElement("div");
   addClass(trackItem, "track-item");
   trackItem.dataset.id = track.id;
-
   const isLiked = track.is_liked || false;
 
   trackItem.innerHTML = `
@@ -92,33 +90,28 @@ const createTrackItem = (track, index, isDetailedTrack = false) => {
     `;
 
   const likeBtn = trackItem.querySelector(".track-like-btn");
-  if (likeBtn) {
-    likeBtn.onclick = async (e) => {
-      e.stopPropagation();
-      const isCurrentlyLiked = hasClass(likeBtn.querySelector("i"), "fas");
-      try {
-        if (isCurrentlyLiked) {
-          await unlikeTrack(track.id);
-          showToast(`Removed "${track.title}" from Liked Songs.`, "success");
-        } else {
-          await likeTrack(track.id);
-          showToast(`Added "${track.title}" to Liked Songs.`, "success");
-        }
-
-        const icon = likeBtn.querySelector("i");
-        toggleClass(icon, "fas fa-heart", !isCurrentlyLiked);
-        toggleClass(icon, "far fa-heart", isCurrentlyLiked);
-        likeBtn.dataset.liked = (!isCurrentlyLiked).toString();
-      } catch (error) {
-        console.error(`Failed to toggle like for track ${track.id}:`, error);
-        showToast(
-          error.message ||
-            `Failed to ${isCurrentlyLiked ? "unlike" : "like"} song.`,
-          "error"
-        );
+  likeBtn.onclick = async (e) => {
+    e.stopPropagation();
+    const isCurrentlyLiked = hasClass(likeBtn.querySelector("i"), "fas");
+    try {
+      if (isCurrentlyLiked) {
+        await unlikeTrack(track.id);
+        showToast(`Removed "${track.title}" from Liked Songs.`, "success");
+      } else {
+        await likeTrack(track.id);
+        showToast(`Added "${track.title}" to Liked Songs.`, "success");
       }
-    };
-  }
+      const icon = likeBtn.querySelector("i");
+      toggleClass(icon, "fas fa-heart", !isCurrentlyLiked);
+      toggleClass(icon, "far fa-heart", isCurrentlyLiked);
+    } catch (error) {
+      showToast(
+        error.message ||
+          `Failed to ${isCurrentlyLiked ? "unlike" : "like"} song.`,
+        "error"
+      );
+    }
+  };
 
   trackItem.addEventListener("click", (e) => {
     if (!e.target.closest(".track-menu-btn")) {
@@ -130,6 +123,22 @@ const createTrackItem = (track, index, isDetailedTrack = false) => {
   return trackItem;
 };
 
+
+const updateDetailPageUI = (updatedPlaylistData) => {
+  currentDetailData = { ...currentDetailData, ...updatedPlaylistData };
+
+  detailName.textContent = currentDetailData.name;
+  detailSubtitle.textContent = `Playlist • ${
+    currentDetailData.owner?.display_name || "Unknown User"
+  } • ${currentDetailData.total_tracks || 0} songs`;
+
+  if (currentDetailData.cover_image_url) {
+    detailImage.src = currentDetailData.cover_image_url;
+  }
+
+  document.dispatchEvent(new CustomEvent("sidebar:refreshPlaylists"));
+};
+
 const handleFollowToggle = async () => {
   if (!currentDetailData) return;
 
@@ -137,29 +146,24 @@ const handleFollowToggle = async () => {
   const isCurrentlyFollowing = hasClass(detailFollowBtn, "active");
 
   try {
+    let actionPromise;
     if (type === "playlist") {
-      if (isCurrentlyFollowing) {
-        await unfollowPlaylist(id);
-        showToast(`Unfollowed playlist "${name}"!`, "success");
-        updateFollowButton(false);
-      } else {
-        await followPlaylist(id); // Follow Playlist API
-        showToast(`Followed playlist "${name}"!`, "success");
-        updateFollowButton(true);
-      }
+      actionPromise = isCurrentlyFollowing
+        ? unfollowPlaylist(id)
+        : followPlaylist(id);
     } else if (type === "artist") {
-      if (isCurrentlyFollowing) {
-        await unfollowArtist(id);
-        showToast(`Unfollowed artist "${name}"!`, "success");
-        updateFollowButton(false);
-      } else {
-        await followArtist(id); // Follow Artist API
-        showToast(`Followed artist "${name}"!`, "success");
-        updateFollowButton(true);
-      }
+      actionPromise = isCurrentlyFollowing
+        ? unfollowArtist(id)
+        : followArtist(id);
+    } else {
+      return;
     }
+
+    await actionPromise;
+    const actionText = isCurrentlyFollowing ? "Unfollowed" : "Followed";
+    showToast(`${actionText} ${type} "${name}"!`, "success");
+    updateFollowButton(!isCurrentlyFollowing);
   } catch (error) {
-    console.error(`Failed to toggle follow for ${type}:`, error);
     showToast(
       error.message ||
         `Failed to ${isCurrentlyFollowing ? "unfollow" : "follow"} ${type}.`,
@@ -168,152 +172,25 @@ const handleFollowToggle = async () => {
   }
 };
 
-const handleImageUpload = async (file) => {
-  if (
-    !currentDetailData ||
-    currentDetailData.type !== "playlist" ||
-    !getUserData() ||
-    currentDetailData.owner?.id !== getUserData().id
-  ) {
-    showToast("You don't have permission to edit this playlist.", "error");
-    return;
-  }
-
-  try {
-    showToast("Uploading image...", "info", 2000);
-
-    const formData = new FormData();
-    formData.append("cover", file);
-
-    const uploadResponse = await uploadPlaylistCover(
-      currentDetailData.id,
-      file
-    );
-
-    if (uploadResponse && uploadResponse.path) {
-      await updatePlaylist(currentDetailData.id, {
-        cover_image_url: uploadResponse.path,
-      });
-      detailImage.src = uploadResponse.path;
-      currentDetailData.cover_image_url = uploadResponse.path;
-      showToast("Playlist image updated!", "success");
-
-      document.dispatchEvent(new CustomEvent("sidebar:refreshPlaylists"));
-    } else {
-      showToast("Image upload failed: Invalid response from server.", "error");
-    }
-  } catch (error) {
-    console.error("Image upload or playlist update failed:", error);
-    showToast(error.message || "Failed to update playlist image.", "error");
-  }
-};
-
-const handleNameOrDescriptionEdit = async (element, field) => {
-  if (
-    !currentDetailData ||
-    currentDetailData.type !== "playlist" ||
-    !getUserData() ||
-    currentDetailData.owner?.id !== getUserData().id
-  ) {
-    showToast("You don't have permission to edit this playlist.", "error");
-    return;
-  }
-
-  const originalText = element.textContent;
-  const input = document.createElement("input");
-  input.type = "text";
-  input.value = originalText;
-  addClass(input, "form-input");
-
-  element.replaceWith(input);
-  input.focus();
-
-  const saveChanges = async () => {
-    const newText = input.value.trim();
-    if (newText === originalText || !newText) {
-      input.replaceWith(element);
-      element.textContent = originalText;
-      return;
-    }
-
-    try {
-      const updateData = {};
-      if (field === "name") {
-        updateData.name = newText;
-      } else if (field === "description") {
-        updateData.description = newText;
-      }
-
-      await updatePlaylist(currentDetailData.id, updateData);
-      element.textContent = newText;
-
-      if (field === "name") {
-        currentDetailData.name = newText;
-        document.dispatchEvent(new CustomEvent("sidebar:refreshPlaylists"));
-      } else if (field === "description") {
-        currentDetailData.description = newText;
-      }
-      showToast(`Playlist ${field} updated!`, "success");
-    } catch (error) {
-      console.error(`Failed to update playlist ${field}:`, error);
-      showToast(
-        error.message || `Failed to update playlist ${field}.`,
-        "error"
-      );
-      element.textContent = originalText;
-    } finally {
-      input.replaceWith(element);
-    }
-  };
-
-  input.addEventListener("blur", saveChanges);
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      input.blur();
-    }
-    if (e.key === "Escape") {
-      input.value = originalText;
-      input.blur();
-    }
-  });
-};
 
 function setupEventListeners() {
   if (detailFollowBtn) {
     detailFollowBtn.addEventListener("click", handleFollowToggle);
   }
 
+ 
   detailPageSections.addEventListener("click", (e) => {
-    if (
-      !currentDetailData ||
-      currentDetailData.type !== "playlist" ||
-      !getUserData() ||
-      currentDetailData.owner?.id !== getUserData().id
-    ) {
-      return;
-    }
+    if (e.target === detailImage || e.target === detailName) {
+      const isOwner =
+        currentDetailData &&
+        currentDetailData.type === "playlist" &&
+        getUserData() &&
+        currentDetailData.owner?.id === getUserData().id;
 
-    if (e.target === detailImage && e.target.dataset.editable === "true") {
-      const fileInput = document.createElement("input");
-      fileInput.type = "file";
-      fileInput.accept = "image/*";
-      fileInput.onchange = (e) => {
-        if (e.target.files && e.target.files[0]) {
-          handleImageUpload(e.target.files[0]);
-        }
-      };
-      fileInput.click();
-    } else if (
-      e.target === detailName &&
-      e.target.dataset.editable === "true"
-    ) {
-      handleNameOrDescriptionEdit(detailName, "name");
-    } else if (
-      e.target === detailSubtitle &&
-      e.target.dataset.editable === "true"
-    ) {
-      if (currentDetailData.description !== undefined) {
-        handleNameOrDescriptionEdit(detailSubtitle, "description");
+      if (isOwner) {
+        openEditPlaylistModal(currentDetailData, (updatedData) => {
+          updateDetailPageUI(updatedData);
+        });
       }
     }
   });
@@ -322,19 +199,13 @@ function setupEventListeners() {
 export const renderDetailPage = async (type, id) => {
   addClass(detailPageSections, "hidden");
   detailTrackList.innerHTML = "";
+
+  // Reset UI
   detailVerifiedBadge.classList.add("hidden");
   detailFollowBtn.classList.add("hidden");
-
   detailImage.style.cursor = "";
-  detailImage.removeAttribute("data-editable");
   detailName.style.cursor = "";
-  detailName.removeAttribute("data-editable");
-  detailSubtitle.style.cursor = "";
-  detailSubtitle.removeAttribute("data-editable");
 
-  let data = null;
-  let isFollowing = false;
-  let isOwner = false;
   const currentUser = getUserData();
 
   try {
@@ -346,63 +217,51 @@ export const renderDetailPage = async (type, id) => {
     } else if (type === "track") {
       response = await getTrackById(id);
     } else {
-      showToast(
-        "Invalid detail page type. Only 'playlist', 'artist', 'track' are supported.",
-        "error"
-      );
+      showToast("Invalid detail page type.", "error");
       return;
     }
 
-    data = response?.data;
-
+    const data = response?.data;
     if (!data) {
-      showToast(
-        `Item with ID ${id} not found or API returned no data.`,
-        "error"
-      );
-      addClass(detailPageSections, "hidden");
+      showToast(`Item with ID ${id} not found.`, "error");
       return;
     }
 
     currentDetailData = data;
 
-    if (type === "track") {
-      detailImage.src =
-        data.image_url || data.album_cover_image_url || "placeholder.svg";
-      detailName.textContent = data.title || "Unknown Track";
-    } else {
-      detailImage.src =
-        data.cover_image_url || data.image_url || "placeholder.svg";
-      detailName.textContent = data.name || data.title || "Unknown Title";
-    }
-
+    detailImage.src =
+      data.image_url || data.cover_image_url || "placeholder.svg";
+    detailName.textContent = data.name || data.title || "Unknown Title";
     detailHero.style.background = `linear-gradient(to bottom, #535353 0%, var(--bg-secondary) 250px)`;
 
     if (type === "playlist") {
       detailTracksTitle.textContent = `Songs`;
-
       detailSubtitle.textContent = `Playlist • ${
         data.owner?.display_name || "Unknown User"
       } • ${data.total_tracks || 0} songs`;
 
-      removeClass(detailFollowBtn, "hidden");
-
-      isFollowing = data.is_followed || false;
-      isOwner = currentUser && data.owner?.id === currentUser.id;
-
-      const playlistTracksResponse = await import("../api/playlists.js").then(
-        (module) => module.getPlaylistTracks(id)
-      );
-      const playlistTracks = Array.isArray(playlistTracksResponse?.data)
-        ? playlistTracksResponse.data
-        : [];
-
-      if (playlistTracks.length > 0) {
-        playlistTracks.forEach((track, index) => {
-          detailTrackList.appendChild(createTrackItem(track, index));
-        });
+      const isOwner = currentUser && data.owner?.id === currentUser.id;
+      if (isOwner) {
+        addClass(detailFollowBtn, "hidden");
+        detailImage.style.cursor = "pointer";
+        detailName.style.cursor = "pointer";
       } else {
-        detailTrackList.innerHTML = `<p class="text-secondary" style="padding: var(--spacing-md); text-align: center;">No songs found in this playlist.</p>`;
+        removeClass(detailFollowBtn, "hidden");
+        updateFollowButton(data.is_followed || false);
+      }
+
+      const tracksResponse = await import("../api/playlists.js").then((m) =>
+        m.getPlaylistTracks(id)
+      );
+      const tracks = Array.isArray(tracksResponse?.data)
+        ? tracksResponse.data
+        : [];
+      if (tracks.length > 0) {
+        tracks.forEach((track, index) =>
+          detailTrackList.appendChild(createTrackItem(track, index))
+        );
+      } else {
+        detailTrackList.innerHTML = `<p class="text-secondary" style="padding: var(--spacing-md); text-align: center;">No songs in this playlist.</p>`;
       }
     } else if (type === "artist") {
       detailTracksTitle.textContent = "Popular Songs";
@@ -410,20 +269,17 @@ export const renderDetailPage = async (type, id) => {
         data.monthly_listeners?.toLocaleString() || 0
       } monthly listeners`;
       removeClass(detailVerifiedBadge, "hidden");
-
       removeClass(detailFollowBtn, "hidden");
-      isFollowing = data.is_followed || false;
-      isOwner = false;
+      updateFollowButton(data.is_followed || false);
 
-      const artistTracksResponse = await getArtistPopularTracks(id);
-      const artistTracks = Array.isArray(artistTracksResponse?.data)
-        ? artistTracksResponse.data
+      const tracksResponse = await getArtistPopularTracks(id);
+      const tracks = Array.isArray(tracksResponse?.data)
+        ? tracksResponse.data
         : [];
-
-      if (artistTracks.length > 0) {
-        artistTracks.forEach((track, index) => {
-          detailTrackList.appendChild(createTrackItem(track, index));
-        });
+      if (tracks.length > 0) {
+        tracks.forEach((track, index) =>
+          detailTrackList.appendChild(createTrackItem(track, index))
+        );
       } else {
         detailTrackList.innerHTML = `<p class="text-secondary" style="padding: var(--spacing-md); text-align: center;">No popular songs found for this artist.</p>`;
       }
@@ -431,19 +287,10 @@ export const renderDetailPage = async (type, id) => {
       detailSubtitle.textContent = `${data.artist_name || "Unknown Artist"} • ${
         data.album_title || "Unknown Album"
       } • ${formatDuration(data.duration || 0)}`;
-
       addClass(detailFollowBtn, "hidden");
       removeClass(detailTracksSection, "hidden");
       detailTracksTitle.textContent = "Track Details";
-
       detailTrackList.appendChild(createTrackItem(data, 0, true));
-    } else {
-      showToast("Unknown detail page type detected.", "error");
-      return;
-    }
-
-    if (type === "playlist" || type === "artist") {
-      updateFollowButton(isFollowing);
     }
 
     removeClass(detailPageSections, "hidden");
@@ -460,5 +307,5 @@ export const hideDetailPage = () => {
 };
 
 export const initDetailPage = () => {
-  setupEventListeners(); //
+  setupEventListeners();
 };

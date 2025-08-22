@@ -14,7 +14,7 @@ import {
   unfollowPlaylist,
 } from "../api/playlists.js";
 import { getMyArtists, unfollowArtist } from "../api/artists.js";
-import { openCreatePlaylistModal } from "./createPlaylistModal.js";
+import { createPlaylist } from "../api/playlists.js";
 import {
   getAccessToken,
   removeAccessToken,
@@ -36,16 +36,15 @@ let currentSortBy = "recents";
 
 export const renderLibraryItems = async () => {
   libraryContent.innerHTML = "";
-
-  const accessToken = getAccessToken(); // Lấy access token
+  const accessToken = getAccessToken();
 
   if (!accessToken) {
     libraryContent.innerHTML = `
-            <p class="text-secondary" style="padding: var(--spacing-md); text-align: center;">
-                Log in to see your library content.
-            </p>
-            <button class="auth-btn login-btn" id="sidebarLoginPrompt" style="margin: var(--spacing-md) auto; display: block;">Log In</button>
-        `;
+      <p class="text-secondary" style="padding: var(--spacing-md); text-align: center;">
+          Log in to see your library content.
+      </p>
+      <button class="auth-btn login-btn" id="sidebarLoginPrompt" style="margin: var(--spacing-md) auto; display: block;">Log In</button>
+    `;
     const sidebarLoginPromptBtn = getElement("#sidebarLoginPrompt");
     if (sidebarLoginPromptBtn) {
       sidebarLoginPromptBtn.addEventListener("click", () => {
@@ -57,7 +56,6 @@ export const renderLibraryItems = async () => {
     return;
   }
 
-  // Case: User is logged in, fetch data
   let items = [];
   try {
     let response;
@@ -68,7 +66,6 @@ export const renderLibraryItems = async () => {
     }
     items = Array.isArray(response?.data) ? response.data : [];
   } catch (error) {
-    console.error(`Failed to load ${currentActiveTab}:`, error);
     if (error.status === 401) {
       showToast("Your session has expired. Please log in again.", "error");
       removeAccessToken();
@@ -91,12 +88,9 @@ export const renderLibraryItems = async () => {
     return;
   }
 
-  // Apply sorting
   items.sort((a, b) => {
     if (currentSortBy === "alphabetical") {
-      const nameA = a.name || a.title || "";
-      const nameB = b.name || b.title || "";
-      return nameA.localeCompare(nameB);
+      return (a.name || a.title || "").localeCompare(b.name || b.title || "");
     }
     return 0;
   });
@@ -108,55 +102,30 @@ export const renderLibraryItems = async () => {
     itemElement.dataset.id = item.id;
     itemElement.dataset.type = item.type;
 
-    let imageUrl;
     let itemTitle = item.name || item.title || "Unknown";
-    let itemSubtitle;
-    let iconHtml = "";
+    let itemSubtitle = isPlaylist
+      ? `Playlist • ${item.owner?.display_name || "User"}`
+      : "Artist";
 
-    if (isPlaylist) {
-      imageUrl = item.cover_image_url;
-      itemSubtitle = item.owner?.display_name
-        ? `Playlist • ${item.owner.display_name}`
-        : "Playlist";
-      if (!imageUrl && itemTitle === "Liked Songs") {
-        iconHtml = `
-                    <div class="item-icon liked-songs">
-                        <i class="fas fa-heart"></i>
-                    </div>
-                 `;
-      }
-    } else {
-      // It's an Artist
-      imageUrl = item.avatar_url; // Postman dùng avatar_url
-      itemSubtitle = "Artist";
-    }
-
-    const imageOrIcon = iconHtml
-      ? iconHtml
-      : `<img src="${
-          imageUrl || "placeholder.svg?height=48&width=48"
-        }" alt="${itemTitle}" class="item-image" />`;
+    const imageOrIcon =
+      item.cover_image_url || item.image_url
+        ? `<img src="${
+            item.cover_image_url || item.image_url
+          }" alt="${itemTitle}" class="item-image" />`
+        : `<div class="item-icon liked-songs"><i class="fas fa-music"></i></div>`;
 
     itemElement.innerHTML = `
-            ${imageOrIcon}
-            <div class="item-info">
-                <div class="item-title">${itemTitle}</div>
-                <div class="item-subtitle">
-                    ${
-                      isPlaylist && itemTitle !== "Liked Songs"
-                        ? `<i class="fas fa-thumbtack"></i> `
-                        : ""
-                    }
-                    ${itemSubtitle}
-                </div>
-            </div>
-        `;
+      ${imageOrIcon}
+      <div class="item-info">
+        <div class="item-title">${itemTitle}</div>
+        <div class="item-subtitle">${itemSubtitle}</div>
+      </div>
+    `;
 
     if (!isPlaylist) {
-      const artistImage = itemElement.querySelector(".item-image");
-      if (artistImage) {
-        artistImage.style.borderRadius = "var(--radius-full)";
-      }
+      itemElement
+        .querySelector(".item-image")
+        ?.style.setProperty("border-radius", "var(--radius-full)");
     }
 
     itemElement.addEventListener("click", () => {
@@ -167,9 +136,10 @@ export const renderLibraryItems = async () => {
 
     itemElement.addEventListener("contextmenu", (e) => {
       const currentUser = getUserData();
-
       const isOwner =
-        isPlaylist && currentUser && item.owner?.id === currentUser.id;
+        isPlaylist &&
+        currentUser &&
+        String(item.owner?.id) === String(currentUser.id);
       const isFollowing = item.is_followed || false;
 
       showContextMenu(e, {
@@ -184,11 +154,7 @@ export const renderLibraryItems = async () => {
     libraryContent.appendChild(itemElement);
   });
 
-  if (currentViewMode === "grid") {
-    addClass(libraryContent, "grid-view");
-  } else {
-    removeClass(libraryContent, "grid-view");
-  }
+  toggleClass(libraryContent, "grid-view", currentViewMode === "grid");
 };
 
 const handleContextMenuAction = async (action, itemData) => {
@@ -196,51 +162,30 @@ const handleContextMenuAction = async (action, itemData) => {
   try {
     switch (action) {
       case "unfollow":
-        if (type === "playlist") {
-          await unfollowPlaylist(id);
-          showToast(`Unfollowed playlist "${name}"!`, "success");
-        } else if (type === "artist") {
-          await unfollowArtist(id);
-          showToast(`Unfollowed artist "${name}"!`, "success");
-        }
+      case "remove-from-profile":
+        if (type === "playlist") await unfollowPlaylist(id);
+        else if (type === "artist") await unfollowArtist(id);
+        showToast(`Removed "${name}" from your library.`, "success");
         break;
       case "delete":
         if (type === "playlist" && isOwner) {
-          await deletePlaylist(id);
-          showToast(`Playlist "${name}" deleted!`, "success");
+          if (
+            confirm(`Are you sure you want to delete the playlist "${name}"?`)
+          ) {
+            await deletePlaylist(id);
+            showToast(`Playlist "${name}" deleted!`, "success");
+            if (navigateToCallback) navigateToCallback("home");
+          }
         } else {
           showToast("You don't have permission to delete this.", "error");
         }
         break;
-      case "remove-from-profile":
-        if (type === "playlist" && !isOwner) {
-          await unfollowPlaylist(id);
-          showToast(`Playlist "${name}" removed from profile!`, "success");
-        } else {
-          showToast("Action not applicable or permission denied.", "error");
-        }
-        break;
-      case "play":
-      case "add-to-queue":
-      case "save-to-your-liked-songs":
-      case "remove-from-liked-songs":
-        showToast(
-          `Action "${action}" for ${type} "${name}" is not yet implemented.`,
-          "info"
-        );
-        break;
       default:
-        console.log(
-          `Unhandled context menu action: "${action}" for ${type} ${id}.`
-        );
+        showToast(`Action "${action}" is not yet implemented.`, "info");
+        return;
     }
-
     await renderLibraryItems();
   } catch (error) {
-    console.error(
-      `Failed to perform action "${action}" on ${type} ${id}:`,
-      error
-    );
     showToast(error.message || `Failed to ${action} ${type}.`, "error");
   }
 };
@@ -273,14 +218,8 @@ const setupEventListeners = () => {
     }
   });
 
-  document.addEventListener("click", (e) => {
-    if (
-      sortDropdown &&
-      !sortBtn.contains(e.target) &&
-      !sortDropdown.contains(e.target)
-    ) {
-      removeClass(sortDropdown, "show");
-    }
+  document.addEventListener("click", () => {
+    removeClass(sortDropdown, "show");
   });
 
   viewToggleBtn.addEventListener("click", () => {
@@ -290,34 +229,33 @@ const setupEventListeners = () => {
     renderLibraryItems();
   });
 
-  createPlaylistBtn.addEventListener("click", () => {
-    const accessToken = getAccessToken();
-    if (!accessToken) {
+  createPlaylistBtn.addEventListener("click", async () => {
+    if (!getAccessToken()) {
       showToast("Please log in to create a playlist.", "info");
       document.dispatchEvent(
         new CustomEvent("openAuthModal", { detail: "login" })
       );
       return;
     }
-
-    openCreatePlaylistModal((newId, newType) => {
-      renderLibraryItems();
-      if (navigateToCallback && newId && newType) {
-        navigateToCallback("detail", newId, newType);
+    try {
+      const newPlaylist = await createPlaylist("My Playlist", "", true);
+      if (newPlaylist) {
+        showToast("New playlist created!", "success");
+        await renderLibraryItems();
+        if (navigateToCallback) {
+          navigateToCallback("editPlaylist", newPlaylist.id, newPlaylist.type);
+        }
       }
-    });
+    } catch (error) {
+      showToast(error.message || "Could not create playlist.", "error");
+    }
   });
 
   initContextMenu(handleContextMenuAction);
 
-  document.addEventListener("authStatusChange", (e) => {
-    renderLibraryItems();
-  });
-
+  document.addEventListener("authStatusChange", renderLibraryItems);
   document.addEventListener("sidebar:refreshPlaylists", () => {
-    if (currentActiveTab === "playlists") {
-      renderLibraryItems();
-    }
+    if (currentActiveTab === "playlists") renderLibraryItems();
   });
 };
 

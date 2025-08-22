@@ -34,7 +34,7 @@ export const getTrendingArtists = async () => {
 export const getArtistAlbums = async (id) => {
   try {
     const response = await httpRequest.get(`artists/${id}/albums`);
-    return { data: response.id };
+    return { data: response };
   } catch (error) {
     console.error(
       `API Error: Get Artist Albums for Artist ID (${id}) failed`,
@@ -77,7 +77,7 @@ export const unfollowArtist = async (id) => {
 
 export const getMyArtists = async () => {
   try {
-    const response = await httpRequest.get("/artists");
+    const response = await httpRequest.get("me/following");
     return { data: response.artists };
   } catch (error) {
     console.error("API Error: Get My Artists failed", error);

@@ -1278,3 +1278,160 @@
 #spotifyLogo > i {
   cursor: pointer;
 }
+
+.edit-playlist-header-area {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-2xl);
+  /* Lấy background từ main-content để tạo hiệu ứng chìm */
+  background: transparent;
+}
+
+.edit-playlist-image-display {
+  position: relative;
+  width: 232px;
+  height: 232px;
+  flex-shrink: 0;
+  background-color: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 4px 60px rgba(0, 0, 0, 0.5);
+}
+
+.edit-playlist-image-display:hover .edit-playlist-image-overlay {
+  opacity: 1;
+}
+
+.edit-playlist-image-icon-wrapper {
+  color: var(--text-secondary);
+}
+
+.edit-playlist-image-icon-wrapper i {
+  font-size: 80px;
+}
+
+.edit-playlist-image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  color: var(--text-primary);
+}
+
+.edit-playlist-image-overlay i {
+  font-size: 32px;
+}
+
+.edit-playlist-image-overlay span {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.edit-playlist-image-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.edit-playlist-info-area {
+  flex-grow: 1;
+  color: var(--text-primary);
+}
+
+.edit-playlist-type {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-xs);
+}
+
+.edit-playlist-name-input {
+  font-size: 96px;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: var(--spacing-sm);
+  border: none;
+  background: none;
+  color: inherit;
+  width: 100%;
+  padding: 0;
+  border-radius: var(--radius-sm);
+}
+.edit-playlist-name-input:focus {
+  outline: none;
+  background-color: var(--bg-hover);
+}
+
+.edit-playlist-owner-display {
+  font-size: 16px;
+}
+
+.edit-playlist-modal-form-body {
+  display: flex;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.edit-playlist-image-container {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  flex-shrink: 0;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.edit-playlist-image-container:hover .edit-playlist-image-overlay {
+  opacity: 1;
+}
+
+.edit-playlist-modal-info {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.edit-playlist-modal-info textarea.form-input {
+  resize: none;
+  height: 100%;
+}
+
+.edit-playlist-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-lg);
+}
+
+.edit-playlist-modal-disclaimer {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: left;
+  flex-grow: 1;
+}
