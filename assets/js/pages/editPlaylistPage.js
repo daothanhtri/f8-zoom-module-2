@@ -1,6 +1,6 @@
 import { getElement, addClass, removeClass } from "../utils/dom.js";
 import { showToast } from "../utils/toast.js";
-import { getPlaylistById } from "../api/playlists.js";
+import { getMyPlaylists, getPlaylistById } from "../api/playlists.js";
 import { getUserData } from "../utils/storage.js";
 import { openEditPlaylistModal } from "../components/editPlaylistModal.js";
 
@@ -10,17 +10,15 @@ const imagePreview = getElement("#editPlaylistImagePreview");
 const nameDisplay = getElement("#editPlaylistNameInput");
 const ownerDisplay = getElement("#editPlaylistOwner");
 
-let currentPlaylist = null;
+let currentPlaylistId = null;
 
-const updatePageUI = (updatedPlaylistData) => {
-  currentPlaylist = { ...currentPlaylist, ...updatedPlaylistData };
-
-  nameDisplay.textContent = currentPlaylist.name;
+const updatePageUI = (playlistData) => {
+  nameDisplay.textContent = playlistData.name;
   ownerDisplay.textContent =
-    currentPlaylist.owner?.display_name || getUserData()?.display_name;
+    playlistData.owner?.display_name || getUserData()?.display_name;
 
-  if (currentPlaylist.cover_image_url) {
-    imagePreview.src = currentPlaylist.cover_image_url;
+  if (playlistData.cover_image_url) {
+    imagePreview.src = playlistData.cover_image_url;
     removeClass(imagePreview, "hidden");
   } else {
     imagePreview.src = "";
@@ -31,17 +29,25 @@ const updatePageUI = (updatedPlaylistData) => {
 };
 
 function setupEventListeners() {
-  editPageSection.addEventListener("click", (e) => {
-    console.log(123);
+  editPageSection.addEventListener("click", async (e) => {
     if (
       e.target === imageDisplay ||
       e.target === nameDisplay ||
       imageDisplay.contains(e.target)
     ) {
-      if (currentPlaylist) {
-        openEditPlaylistModal(currentPlaylist, (updatedData) => {
-          updatePageUI(updatedData);
-        });
+      if (!currentPlaylistId) return;
+
+      try {
+        const response = await getPlaylistById(currentPlaylistId);
+        const freshPlaylistData = response.data;
+
+        if (freshPlaylistData) {
+          openEditPlaylistModal(freshPlaylistData, (updatedData) => {
+            updatePageUI(updatedData);
+          });
+        }
+      } catch (error) {
+        showToast("Could not load playlist details.", "error");
       }
     }
   });
@@ -49,35 +55,33 @@ function setupEventListeners() {
 
 export const renderEditPlaylistPage = async (id) => {
   addClass(editPageSection, "hidden");
+
+  currentPlaylistId = id;
+
   try {
     const response = await getPlaylistById(id);
     const playlistData = response.data;
 
-    if (!playlistData) {
-      showToast("Could not find the playlist.", "error");
-      return;
-    }
+    if (!playlistData) throw new Error("Playlist not found.");
 
     const currentUser = getUserData();
     if (
       !currentUser ||
       String(currentUser.id) !== String(playlistData.owner?.id)
     ) {
-      showToast("You don't have permission to edit this playlist.", "error");
-      return;
+      throw new Error("You don't have permission to edit this playlist.");
     }
 
     updatePageUI(playlistData);
     removeClass(editPageSection, "hidden");
   } catch (error) {
-    console.error("Failed to load playlist for editing:", error);
     showToast(error.message || "Failed to load playlist.", "error");
   }
 };
 
 export const hideEditPlaylistPage = () => {
   addClass(editPageSection, "hidden");
-  currentPlaylist = null;
+  currentPlaylistId = null;
 };
 
 export const initEditPlaylistPage = () => {

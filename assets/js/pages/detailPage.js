@@ -45,7 +45,6 @@ const formatDuration = (seconds) => {
   return `${minutes}:${formattedSeconds}`;
 };
 
-
 const updateFollowButton = (isFollowing) => {
   if (isFollowing) {
     detailFollowBtn.textContent = "Following";
@@ -55,7 +54,6 @@ const updateFollowButton = (isFollowing) => {
     removeClass(detailFollowBtn, "active");
   }
 };
-
 
 const createTrackItem = (track, index, isDetailedTrack = false) => {
   const trackItem = document.createElement("div");
@@ -123,7 +121,6 @@ const createTrackItem = (track, index, isDetailedTrack = false) => {
   return trackItem;
 };
 
-
 const updateDetailPageUI = (updatedPlaylistData) => {
   currentDetailData = { ...currentDetailData, ...updatedPlaylistData };
 
@@ -140,6 +137,13 @@ const updateDetailPageUI = (updatedPlaylistData) => {
 };
 
 const handleFollowToggle = async () => {
+  if (!getAccessToken()) {
+    showToast("Please log in to follow.", "info");
+    document.dispatchEvent(
+      new CustomEvent("openAuthModal", { detail: "login" })
+    );
+    return;
+  }
   if (!currentDetailData) return;
 
   const { id, type, name } = currentDetailData;
@@ -160,25 +164,22 @@ const handleFollowToggle = async () => {
     }
 
     await actionPromise;
-    const actionText = isCurrentlyFollowing ? "Unfollowed" : "Followed";
-    showToast(`${actionText} ${type} "${name}"!`, "success");
-    updateFollowButton(!isCurrentlyFollowing);
+
+    const newFollowState = !isCurrentlyFollowing;
+    currentDetailData.is_followed = newFollowState;
+    updateFollowButton(newFollowState);
+    const actionText = newFollowState ? "Followed" : "Unfollowed";
+    showToast(`${actionText} ${name}!`, "success");
   } catch (error) {
-    showToast(
-      error.message ||
-        `Failed to ${isCurrentlyFollowing ? "unfollow" : "follow"} ${type}.`,
-      "error"
-    );
+    showToast(error.message || `Action failed. Please try again.`, "error");
   }
 };
-
 
 function setupEventListeners() {
   if (detailFollowBtn) {
     detailFollowBtn.addEventListener("click", handleFollowToggle);
   }
 
- 
   detailPageSections.addEventListener("click", (e) => {
     if (e.target === detailImage || e.target === detailName) {
       const isOwner =

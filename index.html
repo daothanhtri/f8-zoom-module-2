@@ -64,22 +64,65 @@
                 <i class="fas fa-list"></i>
               </button>
               <div class="sort-dropdown" id="sortDropdown">
-                <ul>
-                  <li data-sort-by="recents">Recents</li>
-                  <li data-sort-by="alphabetical">Alphabetical</li>
-                  <li data-sort-by="creator">Creator</li>
-                </ul>
+                <div class="sort-section">
+                  <h3 class="sort-section-title">Sort by</h3>
+                  <ul>
+                    <li data-sort-by="recents">
+                      <span>Recents</span>
+                      <i class="fas fa-check"></i>
+                    </li>
+                    <li data-sort-by="recently_added">
+                      <span>Recently Added</span>
+                      <i class="fas fa-check"></i>
+                    </li>
+                    <li data-sort-by="alphabetical">
+                      <span>Alphabetical</span>
+                      <i class="fas fa-check"></i>
+                    </li>
+                    <li data-sort-by="creator">
+                      <span>Creator</span>
+                      <i class="fas fa-check"></i>
+                    </li>
+                  </ul>
+                </div>
+                <hr class="sort-separator" />
+                <div class="sort-section">
+                  <h3 class="sort-section-title">View as</h3>
+                  <div class="view-as-buttons">
+                    <button
+                      class="view-toggle-btn"
+                      data-view="list"
+                      data-tooltip="List view"
+                    >
+                      <i class="fas fa-bars"></i>
+                    </button>
+                    <button
+                      class="view-toggle-btn"
+                      data-view="compact"
+                      data-tooltip="Compact view"
+                    >
+                      <i class="fas fa-list"></i>
+                    </button>
+                    <button
+                      class="view-toggle-btn"
+                      data-view="grid"
+                      data-tooltip="Grid view"
+                    >
+                      <i class="fas fa-grip-horizontal"></i>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <button
+            <!-- <button
               class="view-toggle-btn"
               id="viewToggleBtn"
               data-view="list"
               data-tooltip="Toggle grid/list view"
             >
               <i class="fas fa-grip-horizontal"></i>
-            </button>
+            </button> -->
           </div>
 
           <div class="library-content" id="libraryContent">
