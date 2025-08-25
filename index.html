@@ -114,15 +114,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- <button
-              class="view-toggle-btn"
-              id="viewToggleBtn"
-              data-view="list"
-              data-tooltip="Toggle grid/list view"
-            >
-              <i class="fas fa-grip-horizontal"></i>
-            </button> -->
           </div>
 
           <div class="library-content" id="libraryContent">
@@ -615,6 +606,23 @@
           <button class="add-btn" data-tooltip="Add to playlist">
             <i class="fa-solid fa-plus"></i>
           </button>
+
+          <div class="add-to-playlist-popup" id="addToPlaylistPopup">
+            <div class="popup-header">
+              <h3>Add to playlist</h3>
+            </div>
+            <div class="popup-search">
+              <i class="fas fa-search"></i>
+              <input
+                type="text"
+                placeholder="Find a playlist"
+                id="playlistSearchInputPopup"
+              />
+            </div>
+            <ul class="popup-playlist-list" id="popupPlaylistList">
+              <!-- Danh sách playlist sẽ được render ở đây bằng JS -->
+            </ul>
+          </div>
         </div>
 
         <div class="player-center">

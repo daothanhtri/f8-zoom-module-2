@@ -1,8 +1,6 @@
 import httpRequest from "../utils/httpRequest.js"; // Đảm bảo đường dẫn đúng
 import { getAccessToken } from "../utils/storage.js";
 
-const accessToken = getAccessToken();
-
 export const getAllPlaylists = async () => {
   try {
     const response = await httpRequest.get("playlists?limit=20&offset=0");
@@ -26,7 +24,7 @@ export const getPlaylistById = async (id) => {
 export const getPlaylistTracks = async (playlistId) => {
   try {
     const response = await httpRequest.get(`playlists/${playlistId}/tracks`);
-    return { data: response.playlists };
+    return { data: response };
   } catch (error) {
     console.error(
       `API Error: Get Playlist Tracks for Playlist ID (${playlistId}) failed`,
@@ -97,6 +95,20 @@ export const getMyPlaylists = async () => {
     return { data: response.playlists };
   } catch (error) {
     console.error("API Error: Get My Playlists failed", error);
+    throw error;
+  }
+};
+
+export const addTrackToPlaylist = async (playlistId, trackId) => {
+  try {
+    return await httpRequest.post(`playlists/${playlistId}/tracks`, {
+      track_id: trackId,
+    });
+  } catch (error) {
+    console.error(
+      `API Error: Add Track to Playlist (${playlistId}) failed`,
+      error
+    );
     throw error;
   }
 };

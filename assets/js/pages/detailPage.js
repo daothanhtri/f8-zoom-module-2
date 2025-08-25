@@ -10,6 +10,7 @@ import {
   getPlaylistById,
   followPlaylist,
   unfollowPlaylist,
+  getPlaylistTracks,
 } from "../api/playlists.js";
 
 import {
@@ -242,6 +243,7 @@ export const renderDetailPage = async (type, id) => {
       } • ${data.total_tracks || 0} songs`;
 
       const isOwner = currentUser && data.owner?.id === currentUser.id;
+
       if (isOwner) {
         addClass(detailFollowBtn, "hidden");
         detailImage.style.cursor = "pointer";
@@ -251,16 +253,17 @@ export const renderDetailPage = async (type, id) => {
         updateFollowButton(data.is_followed || false);
       }
 
-      const tracksResponse = await import("../api/playlists.js").then((m) =>
-        m.getPlaylistTracks(id)
-      );
-      const tracks = Array.isArray(tracksResponse?.data)
-        ? tracksResponse.data
+      const tracksResponse = await getPlaylistTracks(id);
+      console.log(tracksResponse);
+
+      const tracks = Array.isArray(tracksResponse?.data.tracks)
+        ? tracksResponse.data.tracks
         : [];
+
       if (tracks.length > 0) {
-        tracks.forEach((track, index) =>
-          detailTrackList.appendChild(createTrackItem(track, index))
-        );
+        tracks.forEach((track, index) => {
+          detailTrackList.appendChild(createTrackItem(track, index));
+        });
       } else {
         detailTrackList.innerHTML = `<p class="text-secondary" style="padding: var(--spacing-md); text-align: center;">No songs in this playlist.</p>`;
       }

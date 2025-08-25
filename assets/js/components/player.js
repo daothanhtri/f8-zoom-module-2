@@ -6,6 +6,8 @@ import {
   toggleClass,
 } from "../utils/dom.js";
 
+import { openAddToPlaylistPopup } from "./addToPlaylistPopup.js";
+
 const PLAYER_STORAGE_KEY = "SPOTIFY_CLONE_PLAYER_CONFIG";
 
 // DOM elements for the player
@@ -15,6 +17,7 @@ const playerTitle = getElement(".player-title");
 const playerArtist = getElement(".player-artist");
 const audio = getElement("#audio");
 const playBtn = getElement(".player-center .play-btn");
+const addBtn = getElement(".player-left .add-btn");
 
 // Progress bar elements
 const progressBar = getElement(".progress-container .progress-bar");
@@ -47,12 +50,11 @@ const repeatOneIconHtml =
   '<i class="fas fa-redo"><span class="repeat-one-text">1</span></i>';
 
 const playerModule = {
-  
   currentQueue: [],
   currentIndex: 0,
   isPlaying: false,
   isRandom: false,
-  repeatMode: "off", 
+  repeatMode: "off",
   currentVolume: 1,
   config: {},
 
@@ -127,7 +129,6 @@ const playerModule = {
   },
 
   handleEvents: function () {
-  
     if (playBtn) {
       playBtn.onclick = () => {
         if (this.isPlaying) {
@@ -138,13 +139,17 @@ const playerModule = {
       };
     }
 
-   
+    if (addBtn) {
+      addBtn.onclick = () => {
+        openAddToPlaylistPopup(this.currentSong);
+      };
+    }
+
     audio.onplay = () => {
       this.isPlaying = true;
       if (playerElement) addClass(playerElement, "playing");
       this.updatePlayPauseButton();
     };
-
 
     audio.onpause = () => {
       this.isPlaying = false;
@@ -152,7 +157,6 @@ const playerModule = {
       this.updatePlayPauseButton();
     };
 
-  
     audio.ontimeupdate = () => {
       if (audio.duration) {
         const progressPercent = (audio.currentTime / audio.duration) * 100;
@@ -167,7 +171,6 @@ const playerModule = {
       }
     };
 
-  
     if (progressBar) {
       let isDraggingProgress = false;
 
@@ -202,7 +205,6 @@ const playerModule = {
       };
     }
 
- 
     if (prevBtn) {
       prevBtn.onclick = () => {
         if (this.currentQueue.length === 0) return;
@@ -215,7 +217,6 @@ const playerModule = {
       };
     }
 
-    
     if (nextBtn) {
       nextBtn.onclick = () => {
         if (this.currentQueue.length === 0) return;
@@ -228,7 +229,6 @@ const playerModule = {
       };
     }
 
-  
     if (randomBtn) {
       randomBtn.onclick = () => {
         this.isRandom = !this.isRandom;
@@ -237,7 +237,6 @@ const playerModule = {
       };
     }
 
-   
     if (repeatBtn) {
       repeatBtn.onclick = () => {
         if (this.repeatMode === "off") {
@@ -252,7 +251,6 @@ const playerModule = {
       };
     }
 
-
     audio.onended = () => {
       if (this.currentQueue.length === 0) {
         this.isPlaying = false;
@@ -262,30 +260,25 @@ const playerModule = {
       }
 
       if (this.repeatMode === "one") {
-        
         audio.play();
       } else if (this.repeatMode === "all") {
-    
-        this.nextSong(); 
+        this.nextSong();
         audio.play();
       } else {
-       
         if (this.currentIndex === this.currentQueue.length - 1) {
           this.isPlaying = false;
           if (playerElement) removeClass(playerElement, "playing");
           this.updatePlayPauseButton();
-          
+
           this.currentIndex = 0;
           this.loadCurrentSong();
         } else {
-        
           this.nextSong();
           audio.play();
         }
       }
     };
 
-   
     if (volumeMuteBtn) {
       volumeMuteBtn.onclick = () => {
         if (audio.volume > 0) {
@@ -300,7 +293,6 @@ const playerModule = {
       };
     }
 
- 
     if (volumeBar) {
       let isDraggingVolume = false;
 
@@ -378,7 +370,7 @@ const playerModule = {
       localStorage.removeItem(PLAYER_STORAGE_KEY);
       this.config = {};
       this.isRandom = false;
-      this.repeatMode = "off"; 
+      this.repeatMode = "off";
       this.currentVolume = 1;
       audio.volume = 1;
     }
@@ -399,13 +391,10 @@ const playerModule = {
     }
   },
 
-
   updateRandomRepeatButtonsUI: function () {
-
     if (randomBtn) {
       toggleClass(randomBtn, "active", this.isRandom);
     }
-
 
     if (repeatBtn) {
       removeClass(repeatBtn, "active");
@@ -415,7 +404,7 @@ const playerModule = {
         addClass(repeatBtn, "active");
       } else if (this.repeatMode === "one") {
         addClass(repeatBtn, "active");
-        repeatBtn.innerHTML = repeatOneIconHtml; 
+        repeatBtn.innerHTML = repeatOneIconHtml;
       }
     }
   },
@@ -449,7 +438,6 @@ const playerModule = {
     }
   },
 
-
   nextSong: function () {
     if (this.currentQueue.length === 0) return;
     this.currentIndex++;
@@ -459,7 +447,6 @@ const playerModule = {
     this.loadCurrentSong();
   },
 
- 
   prevSong: function () {
     if (this.currentQueue.length === 0) return;
     this.currentIndex--;
@@ -468,7 +455,6 @@ const playerModule = {
     }
     this.loadCurrentSong();
   },
-
 
   playRandomSong: function () {
     if (this.currentQueue.length === 0) return;

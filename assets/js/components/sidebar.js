@@ -92,7 +92,7 @@ export const renderLibraryItems = async () => {
   });
 
   items.forEach((item) => {
-    console.log(item);
+    // console.log(item);
 
     const isPlaylist = item.type === "playlist";
     const itemElement = document.createElement("div");
@@ -152,7 +152,7 @@ export const renderLibraryItems = async () => {
 
 const handleContextMenuAction = async (action, itemData) => {
   const { id, type, isOwner, name } = itemData;
-  console.log(itemData);
+  // console.log(itemData);
 
   try {
     let shouldRender = true;

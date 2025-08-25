@@ -15,6 +15,7 @@ import {
 } from "./pages/detailPage.js";
 import { initTooltips } from "./utils/tooltip.js";
 import playerModule from "./components/player.js";
+import { initAddToPlaylistPopup } from "./components/addToPlaylistPopup.js";
 
 export const navigateTo = async (view, id = null, type = null) => {
   hideHomePage();
@@ -35,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTooltips();
 
   playerModule.initPlayer();
+  initAddToPlaylistPopup();
 
   initAuthModal((isLoggedIn, userData) => {
     updateHeaderUI(isLoggedIn, userData);
